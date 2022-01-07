@@ -1,88 +1,47 @@
-// // #![feature(asm)]
-// use std::arch::asm;
-//
-// pub unsafe fn exit(error_code: k_int) {
-//     call!(kty::__NR_exit, error_code);
-// }
-//
-// // #[cfg(target_pointer_width = "64")]
-// // #[path = "x86_64/x64.rs"]
-// // mod abi;
-//
-// // mod asm {
-//
-// // use crate::syscall::raw::arch::abi::SCT;
-//
-// #[inline(always)]
-// pub unsafe fn syscall0(n: SCT) -> SCT {
-//     let ret: SCT;
-//     asm!("syscall" : "={rax}"(ret)
-//                    : "{rax}"(n)
-//                    : "rcx", "r11", "memory"
-//                    : "volatile");
-//     ret
-// }
-//
-// // #[inline(always)]
-// // pub unsafe fn syscall1(n: SCT, a1: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// //
-// // #[inline(always)]
-// // pub unsafe fn syscall2(n: SCT, a1: SCT, a2: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1), "{rsi}"(a2)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// //
-// // #[inline(always)]
-// // pub unsafe fn syscall3(n: SCT, a1: SCT, a2: SCT, a3: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1), "{rsi}"(a2), "{rdx}"(a3)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// //
-// // #[inline(always)]
-// // pub unsafe fn syscall4(n: SCT, a1: SCT, a2: SCT, a3: SCT, a4: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1), "{rsi}"(a2), "{rdx}"(a3),
-// //                      "{r10}"(a4)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// //
-// // #[inline(always)]
-// // pub unsafe fn syscall5(n: SCT, a1: SCT, a2: SCT, a3: SCT, a4: SCT, a5: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1), "{rsi}"(a2), "{rdx}"(a3),
-// //                      "{r10}"(a4), "{r8}"(a5)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// //
-// // #[inline(always)]
-// // pub unsafe fn syscall6(n: SCT, a1: SCT, a2: SCT, a3: SCT, a4: SCT, a5: SCT, a6: SCT) -> SCT {
-// //     let ret: SCT;
-// //     asm!("syscall" : "={rax}"(ret)
-// //                    : "{rax}"(n), "{rdi}"(a1), "{rsi}"(a2), "{rdx}"(a3),
-// //                      "{r10}"(a4), "{r8}"(a5), "{r9}"(a6)
-// //                    : "rcx", "r11", "memory"
-// //                    : "volatile");
-// //     ret
-// // }
-// // }
+#![allow(dead_code)]
+use std::arch::asm;
+
+pub const STDOUT: usize = 1;
+
+//todo enum
+const SYS_WRITE: u64 = 1;
+const SYS_EXIT: u64 = 60;
+
+#[must_use]
+#[allow(clippy::cast_possible_truncation)]
+pub fn sys_write(fd: usize, buf: &str) -> usize {
+    let ret = unsafe { syscall3(SYS_WRITE, fd as u64, buf.as_ptr() as u64, buf.len() as u64) };
+    ret as usize
+}
+
+#[allow(clippy::empty_loop)]
+pub fn sys_exit(error_code: u8) -> ! {
+    let _ = unsafe { syscall1(SYS_EXIT, u64::from(error_code)) };
+    loop {}
+}
+
+unsafe fn syscall1(name: u64, arg1: u64) -> u64 {
+    let ret;
+    asm!(
+        "syscall",
+        in("rax") name,
+        in("rdi") arg1,
+        lateout("rax") ret,
+    );
+    ret
+}
+
+unsafe fn syscall3(name: u64, arg1: u64, arg2: u64, arg3: u64) -> u64 {
+    let ret;
+    asm!(
+        "syscall",
+        in("rax") name,
+        in("rdi") arg1,
+        in("rsi") arg2,
+        in("rdx") arg3,
+        out("rcx") _, // clobbered by syscalls
+        out("r11") _, // clobbered by syscalls
+        lateout("rax") ret,
+    );
+    ret
+}

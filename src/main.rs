@@ -1,35 +1,13 @@
-use std::arch::asm;
+// #![no_std]
+// #![no_main]
+#![warn(clippy::pedantic)]
 
-#[cfg(target_arch = "x86_64")]
-#[path = "arch/x86_64.rs"]
-pub mod arch;
+mod syscall;
 
-#[cfg(target_arch = "x86")]
-#[path = "arch/x86.rs"]
-pub mod arch;
-
-#[cfg(target_arch = "arm")]
-#[path = "arch/arm.rs"]
-pub mod arch;
-
-#[cfg(target_arch = "aarch64")]
-#[path = "arch/aarch64.rs"]
-pub mod arch;
+use crate::syscall::arch::{sys_exit, sys_write, STDOUT};
 
 fn main() {
-    let buf = "Hello from asm!\n";
-    let ret: i32;
-    unsafe {
-        asm!(
-            "syscall",
-            in("rax") 1, // syscall number
-            in("rdi") 1, // fd (stdout)
-            in("rsi") buf.as_ptr(),
-            in("rdx") buf.len(),
-            out("rcx") _, // clobbered by syscalls
-            out("r11") _, // clobbered by syscalls
-            lateout("rax") ret,
-        );
-    }
+    let _ = sys_write(STDOUT, "Hello from asm!\n");
     // println!("write returned: {}", ret);
+    sys_exit(0);
 }
